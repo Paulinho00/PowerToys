@@ -77,7 +77,10 @@ namespace Peek.FilePreviewer.Previewers
             // Create the preview handler
             var previewHandler = await Task.Run(() =>
             {
-                var previewHandlerGuid = GetPreviewHandlerGuid(FileItem.Extension);
+                var previewHandlerGuid = FileItem.Extension == ".ipynb"
+                    ? GetPreviewHandlerGuid(".py")
+                    : GetPreviewHandlerGuid(FileItem.Extension);
+
                 if (!string.IsNullOrEmpty(previewHandlerGuid))
                 {
                     var clsid = Guid.Parse(previewHandlerGuid);
@@ -143,6 +146,8 @@ namespace Peek.FilePreviewer.Previewers
                 if (previewHandler is IInitializeWithStream initWithStream)
                 {
                     fileStream = File.OpenRead(FileItem.Path);
+                    if (FileItem.Extension == ".ipynb")
+                        fileStream = NotebookConverter.ConvertToPythonFile(fileStream);
                     initWithStream.Initialize(new IStreamWrapper(fileStream), STGM_READ);
                 }
                 else if (previewHandler is IInitializeWithItem initWithItem)
@@ -208,6 +213,11 @@ namespace Peek.FilePreviewer.Previewers
 
         public static bool IsItemSupported(IFileSystemItem item)
         {
+            if (item.Extension == ".ipynb")
+            {
+                return true;
+            }
+
             return !string.IsNullOrEmpty(GetPreviewHandlerGuid(item.Extension));
         }
 
